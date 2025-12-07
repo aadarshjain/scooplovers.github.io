@@ -1,0 +1,102 @@
+/* Scoop Lovers - Distributor Portal Styles */
+
+/* Base Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #FEFBF6;
+    background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.03) 1px, transparent 0);
+    background-size: 25px 25px;
+}
+
+.font-brand {
+    font-family: 'Baloo 2', cursive;
+}
+
+body.lang-mr,
+body.lang-mr .font-brand {
+    font-family: 'Noto Sans Devanagari', sans-serif;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #FEFBF6;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #f472b6;
+    border-radius: 10px;
+}
+
+/* Accordion Styles */
+summary {
+    list-style: none;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+details[open] .accordion-content {
+    display: grid;
+}
+
+/* Order Tracking Timeline */
+.tracking-item:not(:last-child) .tracking-line {
+    display: block;
+}
+
+/* Remove Number Input Spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Loading Animations */
+@keyframes drop {
+    0% {
+        transform: translateY(-200%);
+        opacity: 1;
+    }
+    80% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(10%);
+        opacity: 0;
+    }
+}
+
+@keyframes splash {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.2);
+        opacity: 0;
+    }
+}
+
+.milk-drop {
+    animation: drop 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+.milk-splash {
+    transform-origin: 50% 90%;
+    animation: splash 1.5s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}

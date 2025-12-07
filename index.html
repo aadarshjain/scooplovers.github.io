@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Scoop Lovers - Distributor Portal for managing ice cream orders">
+    <meta name="author" content="Scoop Lovers">
+    <title>Scoop Lovers - Distributor Portal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- jsPDF for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="antialiased transition-all duration-300">
+    <!-- Main Container -->
+    <div id="app-container" class="max-w-4xl mx-auto p-4 md:p-6">
+        
+        <!-- Header -->
+        <header id="app-header" class="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-center sticky top-4 z-40 ring-1 ring-black ring-opacity-5 hidden">
+            <div class="flex items-center justify-between w-full sm:w-auto">
+                <h1 class="font-brand text-2xl sm:text-3xl font-extrabold text-pink-500" data-i18n="appTitle">
+                    Scoop Lovers Portal
+                </h1>
+                <select id="lang-selector-mobile" class="sm:hidden bg-pink-50 border border-pink-200 text-pink-700 text-sm rounded-lg p-1 focus:outline-none" onchange="switchLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="mr">मराठी</option>
+                </select>
+            </div>
+            <div class="flex items-center mt-2 sm:mt-0 space-x-4">
+                <div class="text-center sm:text-right">
+                    <p class="text-xs text-gray-500" data-i18n="distributorIdLabel">Distributor ID:</p>
+                    <p id="distributor-id" class="text-sm font-semibold text-gray-700 select-all">Loading...</p>
+                </div>
+                <select id="lang-selector-desktop" class="hidden sm:block bg-pink-50 border border-pink-200 text-pink-700 text-sm rounded-lg p-2 focus:outline-none" onchange="switchLanguage(this.value)">
+                    <option value="en">English</option>
+                    <option value="mr">मराठी</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="text-center py-20 flex flex-col items-center justify-center">
+            <div class="relative w-24 h-24">
+                <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+                    <path class="milk-splash" fill="#EC4899" d="M50 85 Q60 70 70 80 Q80 90 90 80 Q95 70 90 60 Q85 50 75 55 Q65 60 50 50 Q35 60 25 55 Q15 50 10 60 Q5 70 10 80 Q20 90 30 80 Q40 70 50 85 Z"></path>
+                    <path class="milk-drop" fill="#F472B6" d="M50 0 C50 0 50 25 50 25 C40 25 40 40 50 50 C60 40 60 25 50 25 C50 25 50 0 50 0 Z"></path>
+                </svg>
+            </div>
+            <p id="loading-message" class="mt-4 text-gray-600 font-medium" data-i18n="loadingMsg">
+                Getting the scoops...
+            </p>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="hidden">
+            <!-- Tab Navigation -->
+            <div class="bg-white/60 backdrop-blur-sm rounded-xl shadow-md p-2 flex space-x-2 mb-6 ring-1 ring-black ring-opacity-5">
+                <button id="new-order-tab" class="tab-button flex-1 text-pink-600 bg-white font-semibold py-2 px-4 rounded-lg shadow-md transition-all" data-i18n="tabNewOrder">
+                    New Order
+                </button>
+                <button id="history-tab" class="tab-button flex-1 bg-transparent text-gray-500 font-semibold py-2 px-4 rounded-lg transition-all" data-i18n="tabHistory">
+                    Order History
+                </button>
+            </div>
+
+            <!-- New Order Section -->
+            <section id="new-order-section">
+                <div class="bg-white/70 backdrop-blur-lg rounded-2xl shadow-xl p-4 md:p-6 ring-1 ring-black ring-opacity-5">
+                    <h2 class="font-brand text-2xl font-bold text-gray-800 mb-2" data-i18n="selectProducts">
+                        Select Products
+                    </h2>
+                    <p id="instruction-text" class="text-sm text-center text-gray-500 mb-4 p-2 bg-amber-100 rounded-lg transition-opacity duration-1000" data-i18n="instruction">
+                        Tap on a category header to see the products inside.
+                    </p>
+                    <div id="product-list-container" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Order History Section -->
+            <section id="order-history-section" class="hidden">
+                <div class="bg-white/70 backdrop-blur-lg rounded-2xl shadow-xl p-4 md:p-6 ring-1 ring-black ring-opacity-5">
+                    <h2 class="font-brand text-2xl font-bold text-gray-800 mb-4" data-i18n="pastOrders">
+                        Your Past Orders
+                    </h2>
+                    <div id="past-orders-list" class="space-y-4">
+                        <p id="no-orders-message" class="text-gray-500 text-center py-8" data-i18n="noOrdersMsg">
+                            You haven't placed any orders yet.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Order Footer (Place Order Button) -->
+        <footer id="order-footer" class="sticky bottom-4 z-40 mt-6 hidden">
+            <button id="place-order-button" class="w-full max-w-md mx-auto flex items-center justify-center bg-gradient-to-br from-orange-500 to-pink-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-md disabled:from-gray-400 disabled:to-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-cart mr-3">
+                    <circle cx="9" cy="21" r="1"/>
+                    <circle cx="20" cy="21" r="1"/>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+                <span id="order-summary-text" data-i18n="btnPlaceOrder">Place Order</span>
+            </button>
+        </footer>
+    </div>
+
+    <!-- Main Modal (Confirm/Error) -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 text-center max-w-sm mx-auto transform transition-all ring-1 ring-black ring-opacity-5" id="modal-content">
+            <div id="modal-icon" class="mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full"></div>
+            <h3 id="modal-title" class="text-xl font-bold font-brand text-gray-800"></h3>
+            <p id="modal-message" class="text-gray-600 mt-2"></p>
+            <div id="modal-order-summary" class="hidden text-left text-sm mt-4 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded-lg border"></div>
+            <div id="modal-buttons" class="mt-6 flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4"></div>
+        </div>
+    </div>
+
+    <!-- Product Image Modal -->
+    <div id="image-modal" class="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-md flex items-center justify-center p-4 z-[60] hidden" onclick="closeImageModal()">
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full transform transition-all scale-100" onclick="event.stopPropagation()">
+            <div class="relative">
+                <img id="product-image-preview" src="" alt="Product Image" class="w-full h-64 object-cover bg-pink-50">
+                <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 text-center">
+                <h3 id="image-modal-title" class="text-2xl font-brand font-bold text-gray-800 mb-2">Product Name</h3>
+                <p class="text-sm text-gray-500">Freshly scooped goodness!</p>
+                <button onclick="closeImageModal()" class="mt-6 w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-pink-600 transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-max max-w-[90%]"></div>
+
+    <!-- JavaScript - Standalone version without database -->
+    <script>
+        // Global State
+        let productsData = [];
+        let cart = {};
+        let currentLang = 'en';
+        let orders = [];
+        const userId = 'DEMO-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+        // Inline translations and products data
+        const translations = {
+            en: {
+                appTitle: "Scoop Lovers Portal",
+                distributorIdLabel: "Distributor ID:",
+                loadingMsg: "Getting the scoops...",
+                tabNewOrder: "New Order",
+                tabHistory: "Order History",
+                selectProducts: "Select Products",
+                instruction: "Tap on a category header to see the products inside.",
+                pastOrders: "Your Past Orders",
+                noOrdersMsg: "You haven't placed any orders yet.",
+                btnPlaceOrder: "Place Order",
+                btnAddItems: "Add items to order",
+                items: "items",
+                orderPlaced: "Order Placed",
+                vehicleAssigned: "Vehicle Assigned",
+                loaded: "Loaded",
+                dispatched: "Dispatched",
+                pending: "Pending",
+                detailsTitle: "Order Details & Tracking",
+                itemsOrdered: "Items Ordered",
+                units: "units",
+                repeatOrder: "Repeat Order",
+                orderPlacedTitle: "Order Placed!",
+                orderPlacedMsg: "Your order has been successfully submitted.",
+                viewSharePDF: "Download PDF",
+                close: "Close",
+                errorTitle: "Error",
+                emptyOrderTitle: "Empty Order",
+                emptyOrderMsg: "Please add at least one item to your order.",
+                toastCartLoaded: "Previous order loaded into your cart!",
+                confirmHeader: "Order Summary:"
+            },
+            mr: {
+                appTitle: "स्कूप लव्हर्स पोर्टल",
+                distributorIdLabel: "वितरक आयडी:",
+                loadingMsg: "माहिती लोड होत आहे...",
+                tabNewOrder: "नवीन ऑर्डर",
+                tabHistory: "ऑर्डर इतिहास",
+                selectProducts: "उत्पादने निवडा",
+                instruction: "उत्पादने पाहण्यासाठी श्रेणी शीर्षकावर टॅप करा.",
+                pastOrders: "तुमच्या मागील ऑर्डर्स",
+                noOrdersMsg: "तुम्ही अद्याप कोणतीही ऑर्डर दिलेली नाही.",
+                btnPlaceOrder: "ऑर्डर करा",
+                btnAddItems: "वस्तू जोडा",
+                items: "वस्तू",
+                orderPlaced: "ऑर्डर दिली",
+                vehicleAssigned: "गाडी नियुक्त",
+                loaded: "लोड केले",
+                dispatched: "रवाना",
+                pending: "प्रलंबित",
+                detailsTitle: "ऑर्डर तपशील आणि ट्रॅकिंग",
+                itemsOrdered: "ऑर्डर केलेल्या वस्तू",
+                units: "नग",
+                repeatOrder: "पुन्हा ऑर्डर करा",
+                orderPlacedTitle: "ऑर्डर यशस्वी!",
+                orderPlacedMsg: "तुमची ऑर्डर यशस्वीरित्या जमा झाली आहे.",
+                viewSharePDF: "PDF डाउनलोड करा",
+                close: "बंद करा",
+                errorTitle: "त्रुटी",
+                emptyOrderTitle: "रिकामी ऑर्डर",
+                emptyOrderMsg: "कृपया ऑर्डर करण्यासाठी किमान एक वस्तू निवडा.",
+                toastCartLoaded: "मागील ऑर्डर कार्ट मध्ये लोड केली!",
+                confirmHeader: "ऑर्डर सारांश:"
+            }
+        };
+
+        const categoryTranslations = {
+            'Small Cup (30 ML)': 'लहान कप (30 मिली)',
+            'Big Cup (55 ML)': 'मोठा कप (55 मिली)',
+            'Boat Cup (90 ML)': 'बोट कप (90 मिली)',
+            'Cup (100 ML)': 'कप (100 मिली)',
+            'Small Cone (50 ML)': 'लहान कोन (50 मिली)',
+            'Medium Cone (80 ML)': 'मध्यम कोन (80 मिली)',
+            'Big Cone (110 ML)': 'मोठा कोन (110 मिली)',
+            'Ice Candy (40 ML)': 'आईस कँडी (40 मिली)',
+            'Koolfi (35 ML)': 'कुल्फी (35 मिली)',
+            'Premium Kulfi (70 ML)': 'प्रीमियम कुल्फी (70 मिली)',
+            'Punjabi Kulfi (55 ML)': 'पंजाबी कुल्फी (55 मिली)',
+            'Choco Blast': 'चोको ब्लास्ट',
+            'Matka Kulfi': 'मटका कुल्फी',
+            'Sundae': 'संडे',
+            'Novelties': 'नोव्हेल्टीज',
+            'Family Pack (700 ML)': 'फॅमिली पॅक (700 मिली)',
+            'Party Pack (1250 ML)': 'पार्टी पॅक (1250 मिली)',
+            'Bulk Pack (5 LTR)': 'बल्क पॅक (5 लिटर)',
+            'Bulk Pack (4 LTR)': 'बल्क पॅक (4 लिटर)',
+            'Tub (500 ML)': 'टब (500 मिली)',
+            'Take Home Tub (750 ML)': 'टेक होम टब (750 मिली)',
+            'Cake (500 ML)': 'केक (500 मिली)'
+        };
+
+        const productCategories = [
+            { category: 'Small Cup (30 ML)', products: [{ name: 'Vanilla' }, { name: 'Pista' }] },
+            { category: 'Big Cup (55 ML)', products: [{ name: 'Vanilla' }, { name: 'Pista' }, { name: 'Strawberry' }] },
+            { category: 'Boat Cup (90 ML)', products: [{ name: 'American Nuts' }, { name: 'Mango' }, { name: 'Mawa Badam' }, { name: 'Butterscotch' }] },
+            { category: 'Cup (100 ML)', products: [{ name: 'Chocolate Chips' }, { name: 'Sitaphal' }, { name: 'Fruit Cocktail' }, { name: 'Raj Bhog' }, { name: 'Dryfruit Malai' }, { name: 'Tender Coconut' }, { name: 'Choco Almond' }, { name: 'Belgiun Chocolate' }] },
+            { category: 'Small Cone (50 ML)', products: [{ name: 'Choco Vanilla' }, { name: 'Pista' }, { name: 'Butterscotch' }, { name: 'Chocolate' }] },
+            { category: 'Medium Cone (80 ML)', products: [{ name: 'Butterscotch' }, { name: 'Badam' }, { name: 'Mango' }] },
+            { category: 'Big Cone (110 ML)', products: [{ name: 'Vanila' }, { name: 'Strawberry' }, { name: 'Pista' }, { name: 'Chocolate' }, { name: 'Crunchy Butterscotch' }, { name: 'Double Chocolate' }] },
+            { category: 'Ice Candy (40 ML)', products: [{ name: 'Orange Blast' }, { name: 'Mango Blast' }, { name: 'Kala Khatta' }] },
+            { category: 'Koolfi (35 ML)', products: [{ name: 'Mini Mawa Koolfi (25 ML)' }, { name: 'Mawa Koolfi' }, { name: 'Pista Koolfi' }, { name: 'Gulkand Koolfi' }] },
+            { category: 'Premium Kulfi (70 ML)', products: [{ name: 'Raj Bhog kulfi' }, { name: 'Badam Kulfi' }, { name: 'Pista Koolfi' }] },
+            { category: 'Punjabi Kulfi (55 ML)', products: [{ name: 'Rabdi Koolfi' }, { name: 'Dryfruit Koolfi' }, { name: 'Punjabi Koolfi' }, { name: 'Anjeer Badam Koolfi' }] },
+            { category: 'Choco Blast', products: [{ name: 'Mini Crunchy Chocobar (40 ML)' }, { name: 'Big Crunchy (70 ML)' }, { name: 'Choco Nutty (70 ML)' }, { name: 'Choco Butter Byte (70 ML)' }, { name: 'Choco Feast (70 ML)' }, { name: 'Choco Almond (70 ML)' }] },
+            { category: 'Matka Kulfi', products: [{ name: 'Matka Kulfi (90 ML)' }, { name: 'Dryfruit Matka (100 ML)' }] },
+            { category: 'Sundae', products: [{ name: 'Mix Fruit Sunday (60 ML)' }, { name: 'Chocolate Ripple (100 ML)' }, { name: 'Mango Ripple (100 ML)' }, { name: 'Rajbhog Sunday (150 ML)' }, { name: 'American Dryfruits Sunday (150 ML)' }, { name: 'Fully Loaded Sunday (150 ML)' }] },
+            { category: 'Novelties', products: [{ name: 'Sandwich (80 ML)' }, { name: 'Cassata (120 ML)' }, { name: 'Mawa Malai Roll Cut (100 ML)' }, { name: 'Dryfruit Roll Cut (100 ML)' }] },
+            { category: 'Family Pack (700 ML)', products: [{ name: 'Vanilla' }, { name: 'Strawberry' }, { name: 'Badam' }, { name: 'Pista' }, { name: 'Tutti Frutti' }, { name: 'Butterscotch' }, { name: 'Mango' }, { name: 'Chocolate Fudge' }, { name: 'Kaju Kishmish' }, { name: 'Chocolate Chips' }, { name: 'Tender Coconut' }, { name: 'American Nuts' }, { name: 'Dryfruit Malai Kulfi' }, { name: 'Rajbhog' }, { name: 'Kesar Pista' }, { name: 'Sitaphal' }] },
+            { category: 'Party Pack (1250 ML)', products: [{ name: 'Vanilla' }, { name: 'Pista' }, { name: 'Strawberry' }, { name: 'Mango' }, { name: 'Butterscotch' }, { name: 'Chocolate' }, { name: 'Dryfruit Malai Kulfi' }, { name: 'American Nuts' }, { name: 'Rajbhog' }] },
+            { category: 'Bulk Pack (5 LTR)', products: [{ name: 'Vanilla' }, { name: 'Pista' }, { name: 'Strawberry' }, { name: 'Mango' }, { name: 'Butterscotch' }, { name: 'Chocolate' }] },
+            { category: 'Bulk Pack (4 LTR)', products: [{ name: 'Vanilla' }, { name: 'Pista' }, { name: 'Strawberry' }, { name: 'Badam' }, { name: 'Pineaaple' }, { name: 'Mango' }, { name: 'Butterscotch' }, { name: 'Gulkand' }, { name: 'Chocolate' }, { name: 'Choco Chips' }, { name: 'Tutti Frutti' }, { name: 'Coffee Co' }, { name: 'Black Current' }, { name: 'American Nuts' }, { name: 'Rajbhog' }, { name: 'Dryfruit Malai' }, { name: 'Kesar Pista' }, { name: 'Sitaphal' }, { name: 'Tender Coconut' }, { name: 'Rosted Almond' }, { name: 'Spicy Guava' }] },
+            { category: 'Tub (500 ML)', products: [{ name: 'Chocolate Ripple' }, { name: 'Mango Ripple' }] },
+            { category: 'Take Home Tub (750 ML)', products: [{ name: 'American Nuts' }, { name: 'RAJBHOG' }, { name: 'Dryfruit Malai Kulfi' }, { name: 'Butterscotch' }] },
+            { category: 'Cake (500 ML)', products: [{ name: 'BlackForest Cake' }, { name: 'GoldanFantcy Cake' }] }
+        ];
+
+        // Language Switching
+        window.switchLanguage = function(lang) {
+            currentLang = lang;
+            document.getElementById('lang-selector-mobile').value = lang;
+            document.getElementById('lang-selector-desktop').value = lang;
+            
+            if (lang === 'mr') {
+                document.body.classList.add('lang-mr');
+            } else {
+                document.body.classList.remove('lang-mr');
+            }
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) {
+                    el.textContent = translations[currentLang][key];
+                }
+            });
+            
+            renderGroupedProducts();
+            fetchOrderHistory();
+            updateOrderButton();
+        };
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        // Image Modal
+        window.openImageModal = (name) => {
+            const imgUrl = `https://placehold.co/600x600/FFF8F0/EC4899?text=${encodeURIComponent(name)}&font=roboto`;
+            document.getElementById('product-image-preview').src = imgUrl;
+            document.getElementById('image-modal-title').textContent = name;
+            
+            const modal = document.getElementById('image-modal');
+            modal.classList.remove('hidden');
+            modal.firstElementChild.classList.remove('scale-95', 'opacity-0');
+            modal.firstElementChild.classList.add('scale-100', 'opacity-100');
+        };
+
+        window.closeImageModal = () => {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('hidden');
+        };
+
+        // Initialize Application (No Database Version)
+        function initialize() {
+            // Set distributor ID
+            document.getElementById('distributor-id').textContent = userId;
+            
+            // Load orders from localStorage
+            const savedOrders = localStorage.getItem('scoopLoversOrders');
+            if (savedOrders) {
+                orders = JSON.parse(savedOrders);
+            }
+            
+            // Initialize products
+            initializeProducts();
+            
+            // Hide loading and show app
+            document.getElementById('loading-state').classList.add('hidden');
+            ['app-header', 'main-content', 'order-footer'].forEach(id => {
+                document.getElementById(id).classList.remove('hidden');
+            });
+            
+            updateOrderButton();
+            
+            // Hide instruction text after 7 seconds
+            setTimeout(() => {
+                const instructionText = document.getElementById('instruction-text');
+                instructionText.style.opacity = '0';
+                setTimeout(() => {
+                    instructionText.style.display = 'none';
+                }, 1000);
+            }, 7000);
+            
+            renderGroupedProducts();
+            fetchOrderHistory();
+        }
+
+        function initializeProducts() {
+            productsData = [];
+            productCategories.forEach(category => {
+                category.products.forEach(product => {
+                    const id = `${category.category}-${product.name}`
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]/g, '-');
+                    productsData.push({
+                        id: id,
+                        name: product.name,
+                        description: category.category
+                    });
+                });
+            });
+        }
+
+        function fetchOrderHistory() {
+            const list = document.getElementById('past-orders-list');
+            
+            if (orders.length === 0) {
+                list.innerHTML = `<p class="text-gray-500 text-center py-8">${t('noOrdersMsg')}</p>`;
+                return;
+            }
+            
+            // Sort orders by date (newest first)
+            const sortedOrders = [...orders].sort((a, b) => 
+                new Date(b.createdAt) - new Date(a.createdAt)
+            );
+            
+            list.innerHTML = '';
+            sortedOrders.forEach(order => list.appendChild(createOrderHistoryCard(order)));
+        }
+
+        function renderGroupedProducts() {
+            const container = document.getElementById('product-list-container');
+            container.innerHTML = '';
+            
+            const groups = {};
+            productCategories.forEach(cat => groups[cat.category] = []);
+            productsData.forEach(product => {
+                if (groups[product.description]) {
+                    groups[product.description].push(product);
+                }
+            });
+            
+            let isFirst = true;
+            
+            for (const [category, products] of Object.entries(groups)) {
+                if (products.length === 0) continue;
+                
+                const details = document.createElement('details');
+                details.className = 'bg-white/50 rounded-xl transition-all shadow-lg group ring-1 ring-black ring-opacity-5 mb-3';
+                details.open = isFirst;
+                
+                const displayCategory = (currentLang === 'mr' && categoryTranslations[category]) 
+                    ? categoryTranslations[category] 
+                    : category;
+                
+                details.innerHTML = `
+                    <summary class="p-4 flex justify-between items-center cursor-pointer hover:bg-amber-50 rounded-t-xl">
+                        <h3 class="font-bold text-lg text-gray-800">${displayCategory}</h3>
+                        <svg class="w-5 h-5 text-gray-500 transition-transform group-open:rotate-90" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <polyline points="9 18 15 12 9 6" stroke-width="2.5" 
+                                      stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                    </summary>
+                    <div class="accordion-content p-4 grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200"></div>
+                `;
+                
+                const content = details.querySelector('.accordion-content');
+                products.forEach(product => content.appendChild(createProductCard(product)));
+                
+                container.appendChild(details);
+                isFirst = false;
+            }
+        }
+
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg p-3 flex items-center justify-between shadow-sm';
+            
+            const quantity = cart[product.id] || 0;
+            
+            card.innerHTML = `
+                <div class="flex items-center">
+                    <h4 class="font-semibold text-md text-gray-700 mr-2 cursor-pointer"
+                        onclick="openImageModal('${product.name}')">${product.name}</h4>
+                    <button onclick="openImageModal('${product.name}')" 
+                            class="text-pink-300 hover:text-pink-500 focus:outline-none transition-colors p-1" 
+                            title="View Image">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="minus-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full font-bold hover:bg-gray-300">-</button>
+                    <input type="number" value="${quantity}" min="0" 
+                           class="qty-input font-bold text-lg text-pink-500 w-16 text-center bg-gray-50 border border-gray-200 rounded-md focus:ring-pink-500 focus:border-pink-500">
+                    <button class="plus-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full font-bold hover:bg-gray-300">+</button>
+                </div>
+            `;
+            
+            const input = card.querySelector('.qty-input');
+            const updateQuantity = (value) => {
+                value = parseInt(value) || 0;
+                if (value < 0) value = 0;
+                cart[product.id] = value;
+                input.value = value;
+                updateOrderButton();
+            };
+            
+            card.querySelector('.minus-btn').onclick = () => updateQuantity(parseInt(input.value) - 1);
+            card.querySelector('.plus-btn').onclick = () => updateQuantity(parseInt(input.value) + 1);
+            input.oninput = () => updateQuantity(input.value);
+            
+            return card;
+        }
+
+        function updateOrderButton() {
+            const total = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+            const button = document.getElementById('place-order-button');
+            button.disabled = total === 0;
+            
+            const summaryText = total > 0 
+                ? `${t('btnPlaceOrder')} (${total} ${t('items')})` 
+                : t('btnAddItems');
+            document.getElementById('order-summary-text').textContent = summaryText;
+        }
+
+        function createOrderHistoryCard(order) {
+            const details = document.createElement('details');
+            details.className = 'bg-white/50 rounded-xl border border-gray-200/50 shadow-lg group transition-all';
+            
+            const date = new Date(order.createdAt).toLocaleString('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            });
+            
+            const status = getStatus(order.tracking);
+            const displayId = order.customOrderId || order.id.substring(0, 6);
+            
+            details.innerHTML = `
+                <summary class="p-4 flex flex-wrap justify-between items-center cursor-pointer hover:bg-amber-50/50 rounded-t-xl">
+                    <div class="mb-2">
+                        <p class="font-semibold text-gray-800">Order ${displayId}</p>
+                        <p class="text-sm text-gray-500">${date}</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm font-semibold px-3 py-1 rounded-full ${status.cls}">${status.txt}</span>
+                        <svg class="w-5 h-5 text-gray-500 transition-transform group-open:rotate-90" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <polyline points="9 18 15 12 9 6" stroke-width="2.5" 
+                                      stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        </svg>
+                    </div>
+                </summary>
+                <div class="p-4 border-t border-gray-200/80">
+                    <h4 class="font-bold text-md mb-4 text-gray-800">${t('detailsTitle')}</h4>
+                    <div class="mb-4">${createTimeline(order.tracking)}</div>
+                    <h5 class="font-semibold text-gray-700 mb-2">${t('itemsOrdered')}:</h5>
+                    <ul class="space-y-1 text-sm mb-4">
+                        ${order.items.map(item => `
+                            <li class="flex justify-between">
+                                <span class="text-gray-600">${item.name}</span>
+                                <span class="font-medium text-gray-800">${item.quantity} ${t('units')}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <button class="rpt-btn w-full flex items-center justify-center bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-blue-600 active:scale-95">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M17 2.1a9 9 0 0 1 4.9 4.9"/>
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M3 21.9a9.02 9.02 0 0 1-1.9-4.9"/>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" 
+                                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        ${t('repeatOrder')}
+                    </button>
+                </div>
+            `;
+            
+            details.querySelector('.rpt-btn').onclick = () => handleRepeat(order);
+            return details;
+        }
+
+        function handleRepeat(order) {
+            cart = {};
+            order.items.forEach(item => {
+                const product = productsData.find(p => 
+                    p.name === item.name && p.description === item.description
+                );
+                if (product) {
+                    cart[product.id] = item.quantity;
+                }
+            });
+            
+            document.getElementById('new-order-tab').click();
+            renderGroupedProducts();
+            updateOrderButton();
+            showToast(t('toastCartLoaded'));
+        }
+
+        function getStatus(trackingData) {
+            const statusMap = {
+                'Pending': 'pending',
+                'Order Placed': 'orderPlaced',
+                'Vehicle Assigned': 'vehicleAssigned',
+                'Loaded': 'loaded',
+                'Dispatched': 'dispatched'
+            };
+            
+            const classMap = {
+                'Pending': 'bg-gray-200 text-gray-800',
+                'Order Placed': 'bg-blue-100 text-blue-800',
+                'Vehicle Assigned': 'bg-indigo-100 text-indigo-800',
+                'Loaded': 'bg-purple-100 text-purple-800',
+                'Dispatched': 'bg-green-100 text-green-800'
+            };
+            
+            let status = 'Pending';
+            
+            if (trackingData?.dispatched?.status === 'Completed') {
+                status = 'Dispatched';
+            } else if (trackingData?.loaded?.status === 'Completed') {
+                status = 'Loaded';
+            } else if (trackingData?.assigned?.status === 'Completed') {
+                status = 'Vehicle Assigned';
+            } else if (trackingData?.placed?.status === 'Completed') {
+                status = 'Order Placed';
+            }
+            
+            return {
+                txt: t(statusMap[status]),
+                cls: classMap[status]
+            };
+        }
+
+        function createTimeline(trackingData) {
+            if (!trackingData) return '';
+            
+            const steps = [
+                { id: 'placed', k: 'orderPlaced' },
+                { id: 'assigned', k: 'vehicleAssigned' },
+                { id: 'loaded', k: 'loaded' },
+                { id: 'dispatched', k: 'dispatched' }
+            ];
+            
+            let html = '';
+            
+            steps.forEach(step => {
+                const data = trackingData[step.id];
+                const isDone = data?.status === 'Completed';
+                const timestamp = isDone && data.timestamp
+                    ? new Date(data.timestamp).toLocaleString('en-IN', {
+                        timeStyle: 'short',
+                        dateStyle: 'short'
+                    })
+                    : t('pending');
+                
+                html += `
+                    <div class="flex tracking-item">
+                        <div class="flex flex-col items-center mr-4">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full ${isDone ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'} shadow-md">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="w-1 h-16 ${isDone ? 'bg-green-500' : 'bg-gray-200'} tracking-line hidden"></div>
+                        </div>
+                        <div class="pt-1 pb-8">
+                            <p class="${isDone ? 'text-gray-800 font-semibold' : 'text-gray-500'}">${t(step.k)}</p>
+                            <p class="text-sm text-gray-500">${timestamp}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return html;
+        }
+
+        function handlePlaceOrder() {
+            document.getElementById('place-order-button').disabled = true;
+            
+            const items = Object.entries(cart)
+                .filter(([, quantity]) => quantity > 0)
+                .map(([id, quantity]) => {
+                    const product = productsData.find(p => p.id === id);
+                    return {
+                        productId: id,
+                        name: product.name,
+                        description: product.description,
+                        quantity: quantity
+                    };
+                });
+            
+            if (items.length === 0) {
+                showErrorModal(t('emptyOrderTitle'), t('emptyOrderMsg'));
+                updateOrderButton();
+                return;
+            }
+            
+            // Create order without database
+            const now = new Date();
+            const todayOrders = orders.filter(o => {
+                const orderDate = new Date(o.createdAt);
+                return orderDate.toDateString() === now.toDateString();
+            });
+            
+            const customOrderId = `CMP${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}${now.getFullYear()}-${String(todayOrders.length + 1).padStart(3, '0')}`;
+            
+            const newOrder = {
+                id: 'order-' + Date.now(),
+                distributorId: userId,
+                customOrderId: customOrderId,
+                items: items,
+                createdAt: now.toISOString(),
+                tracking: {
+                    placed: { status: 'Completed', timestamp: now.toISOString() },
+                    assigned: { status: 'Pending' },
+                    loaded: { status: 'Pending' },
+                    dispatched: { status: 'Pending' }
+                }
+            };
+            
+            // Save to localStorage
+            orders.push(newOrder);
+            localStorage.setItem('scoopLoversOrders', JSON.stringify(orders));
+            
+            showConfirm({
+                id: newOrder.id,
+                customOrderId: customOrderId,
+                items: items,
+                createdAt: now
+            });
+            
+            // Refresh order history
+            fetchOrderHistory();
+        }
+
+        // Tab Navigation
+        document.getElementById('new-order-tab').onclick = () => {
+            document.getElementById('new-order-section').classList.remove('hidden');
+            document.getElementById('order-footer').classList.remove('hidden');
+            document.getElementById('order-history-section').classList.add('hidden');
+        };
+
+        document.getElementById('history-tab').onclick = () => {
+            document.getElementById('new-order-section').classList.add('hidden');
+            document.getElementById('order-footer').classList.add('hidden');
+            document.getElementById('order-history-section').classList.remove('hidden');
+        };
+
+        // Place Order Button
+        document.getElementById('place-order-button').onclick = handlePlaceOrder;
+
+        function showConfirm(order) {
+            const summary = `
+                <strong>${t('confirmHeader')}</strong>
+                <ul class="list-disc pl-5 mt-1 text-left">
+                    ${order.items.map(item => `<li>${item.name} - <strong>${item.quantity}</strong></li>`).join('')}
+                </ul>
+            `;
+            
+            const modal = document.getElementById('modal');
+            document.getElementById('modal-title').textContent = t('orderPlacedTitle');
+            document.getElementById('modal-message').textContent = t('orderPlacedMsg');
+            document.getElementById('modal-icon').className = 'mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-full shadow-lg bg-green-500';
+            document.getElementById('modal-icon').innerHTML = `
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M5 13l4 4L19 7" stroke-width="2"/>
+                </svg>
+            `;
+            
+            document.getElementById('modal-order-summary').innerHTML = summary;
+            document.getElementById('modal-order-summary').classList.remove('hidden');
+            
+            const buttons = document.getElementById('modal-buttons');
+            buttons.innerHTML = '';
+            
+            const pdfButton = document.createElement('button');
+            pdfButton.textContent = t('viewSharePDF');
+            pdfButton.className = "w-full sm:w-auto bg-green-500 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-green-600 mb-2 sm:mb-0";
+            pdfButton.onclick = () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(20);
+                doc.text("Scoop Lovers", 105, 20, null, null, 'center');
+                doc.setFontSize(12);
+                doc.text(`Distributor: ${userId}`, 15, 40);
+                doc.text(`Order: ${order.customOrderId}`, 15, 47);
+                doc.text(`Date: ${order.createdAt.toLocaleString()}`, 15, 54);
+                
+                doc.autoTable({
+                    head: [['Item', 'Category', 'Qty']],
+                    body: order.items.map(item => [item.name, item.description, item.quantity]),
+                    startY: 65,
+                    headStyles: { fillColor: [236, 72, 153] }
+                });
+                
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Order_${order.customOrderId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+            
+            const closeButton = document.createElement('button');
+            closeButton.textContent = t('close');
+            closeButton.className = "w-full sm:w-auto bg-gray-500 text-white font-semibold py-2 px-6 rounded-lg shadow hover:bg-gray-600";
+            closeButton.onclick = () => {
+                modal.classList.add('hidden');
+                resetOrderForm();
+            };
+            
+            buttons.append(pdfButton, closeButton);
+            modal.classList.remove('hidden');
+        }
+
+        function resetOrderForm() {
+            cart = {};
+            renderGroupedProducts();
+            updateOrderButton();
+        }
+
+        function showErrorModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.className = 'bg-gray-800 text-white py-2 px-5 rounded-full shadow-lg fixed bottom-24 left-1/2 -translate-x-1/2 z-50 transition-all';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>
